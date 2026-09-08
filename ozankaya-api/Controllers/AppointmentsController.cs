@@ -74,7 +74,7 @@ namespace ozankaya_api.Controllers
                 _context.BlockedSlots.Remove(existing);
                 isBooked = false;
             }
-            else;
+            else // Buradaki hatalı noktalı virgül temizlendi!
             {
                 _context.BlockedSlots.Add(slot);
                 isBooked = true;
@@ -102,7 +102,6 @@ namespace ozankaya_api.Controllers
             _context.Appointments.Remove(appointment);
             await _context.SaveChangesAsync();
 
-            // Sildiği an SignalR üzerinden tüm ekranlarda o saati yeşile çevirir
             await _hubContext.Clients.All.SendAsync("SlotUpdated", new
             {
                 barberId = appointment.BarberId,

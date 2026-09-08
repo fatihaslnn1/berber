@@ -57,7 +57,6 @@ export default function App() {
       const res = await fetch(`${API_URL}/slots?barberId=${selectedBarber}&date=${selectedDate}`);
       if (res.ok) {
         const data = await res.json();
-        // Saniye farkını önlemek için saatleri HH:mm formatına normalize et
         const normalized = data.map(t => typeof t === 'string' ? t.substring(0, 5) : t);
         setDisabledSlots(normalized);
       }
@@ -157,13 +156,35 @@ export default function App() {
     }
   };
 
-  // Backend'in veritabanı eşleştirmesi yapabilmesi için saati saniyeli formatta (HH:mm:ss) gönderiyoruz
+  // KESİN ÇÖZÜM: Kapalı saate basıldığında veritabanından ID'yi bulup doğrudan DELETE atar, açıksa toggle eder
   const toggleSlot = async (time) => {
     if (!adminBarber || isSunday) return;
-    
-    const formattedTime = time.length === 5 ? `${time}:00` : time;
+
+    const isCurrentlyDisabled = disabledSlots.includes(time);
 
     try {
+      if (isCurrentlyDisabled) {
+        const resAll = await fetch(API_URL);
+        if (resAll.ok) {
+          const allAppts = await resAll.json();
+          const target = allAppts.find(a => 
+            Number(a.barberId) === Number(selectedBarber) && 
+            String(a.date).split('T')[0] === String(selectedDate) && 
+            String(a.time).substring(0, 5) === time
+          );
+
+          if (target) {
+            const delRes = await fetch(`${API_URL}/${target.id}`, { method: 'DELETE' });
+            if (delRes.ok) {
+              fetchSlots();
+              fetchAppointments();
+              return;
+            }
+          }
+        }
+      }
+
+      const formattedTime = time.length === 5 ? `${time}:00` : time;
       const res = await fetch(`${API_URL}/toggle-slot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,12 +198,9 @@ export default function App() {
       if (res.ok) {
         fetchSlots();
         if (adminBarber) fetchAppointments();
-      } else {
-        const errorText = await res.text();
-        console.error("Toggle slot hatası:", errorText);
       }
     } catch (err) {
-      console.error("Bağlantı hatası:", err);
+      console.error("Saat durumu değiştirilemedi:", err);
     }
   };
 
