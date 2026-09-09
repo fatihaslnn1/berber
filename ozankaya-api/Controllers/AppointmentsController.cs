@@ -62,6 +62,18 @@ namespace ozankaya_api.Controllers
             return Ok(appointment);
         }
 
+        [HttpPost("{id}/accept")]
+        public async Task<IActionResult> AcceptAppointment(int id)
+        {
+            var appointment = await _context.Appointments.FindAsync(id);
+            if (appointment == null) return NotFound();
+
+            appointment.IsAccepted = true;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Randevu başarıyla kabul edildi." });
+        }
+
         [HttpPost("toggle-slot")]
         public async Task<IActionResult> ToggleSlot([FromBody] BlockedSlot slot)
         {
@@ -74,7 +86,7 @@ namespace ozankaya_api.Controllers
                 _context.BlockedSlots.Remove(existing);
                 isBooked = false;
             }
-            else // Buradaki hatalı noktalı virgül temizlendi!
+            else
             {
                 _context.BlockedSlots.Add(slot);
                 isBooked = true;

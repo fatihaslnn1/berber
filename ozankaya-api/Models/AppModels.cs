@@ -18,6 +18,7 @@ namespace ozankaya_api.Models
         public string Time { get; set; } = string.Empty;
         public string Services { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public bool IsAccepted { get; set; } = false; // Yeni eklenen alan
     }
 
     public class BlockedSlot

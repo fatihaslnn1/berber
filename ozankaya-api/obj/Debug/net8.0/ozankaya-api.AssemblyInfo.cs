@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ozankaya-api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+86b1330fa6810da6acc8fce576ac1acfbe48ae91")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1049360cd6cf89125efa79c6ab6cbdb5d6b66bb0")]
 [assembly: System.Reflection.AssemblyProductAttribute("ozankaya-api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ozankaya-api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

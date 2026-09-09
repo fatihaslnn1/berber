@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import * as signalR from '@microsoft/signalr';
 
-const API_URL = "http://localhost:5000/api/appointments";
-const HUB_URL = "http://localhost:5000/appointmentHub";
+const API_URL = "https://ozankaya-api.onrender.com/api/appointments";
+const HUB_URL = "https://ozankaya-api.onrender.com/appointmentHub";
 
 const barbers = [
   { id: 1, name: "Ozan KAYA", title: "Baş Tasarımcı & Usta Berber", chair: "Koltuk 1" },
@@ -156,7 +156,6 @@ export default function App() {
     }
   };
 
-  // KESİN ÇÖZÜM: Kapalı saate basıldığında veritabanından ID'yi bulup doğrudan DELETE atar, açıksa toggle eder
   const toggleSlot = async (time) => {
     if (!adminBarber || isSunday) return;
 
@@ -217,12 +216,32 @@ export default function App() {
     }
   };
 
+  const handleAccept = async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/${id}/accept`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        // SMS alertini sildik, sadece listeyi yeniliyoruz ki aşağıya düşsün
+        fetchAppointments();
+      } else {
+        alert("Randevu kabul edilirken bir hata oluştu.");
+      }
+    } catch (error) {
+      console.error("Hata:", error);
+    }
+  };
+
   const filteredAppointments = appointments.filter(a => 
     (!adminBarber || a.barberId === adminBarber) &&
     (a.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
      a.phone.includes(searchTerm) ||
      a.date.includes(searchTerm))
   );
+
+  // Randevuları ikiye bölüyoruz
+  const pendingAppointments = filteredAppointments.filter(a => !a.isAccepted);
+  const acceptedAppointments = filteredAppointments.filter(a => a.isAccepted);
 
   return (
     <div style={styles.page}>
@@ -416,50 +435,115 @@ export default function App() {
           <div className="animate-fade delay-3" style={styles.adminCard}>
             <div style={styles.adminHeader}>
               <h2 style={{...styles.sectionTitle, margin: 0, textAlign: 'center'}}>
-                {adminBarber === 1 ? 'Ozan Kaya - Randevu Listesi' : 'Efehan Sayıcı - Randevu Listesi'}
+                {adminBarber === 1 ? 'Ozan Kaya - Yönetici Paneli' : 'Efehan Sayıcı - Yönetici Paneli'}
               </h2>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Berberi</th>
-                    <th style={styles.th}>Müşteri</th>
-                    <th style={styles.th}>Telefon</th>
-                    <th style={styles.th}>Tarih ve Saat</th>
-                    <th style={{...styles.th, textAlign: 'center'}}>Değişiklikler</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAppointments.length === 0 ? (
+            
+            {/* YENİ GELEN RANDEVULAR TABLOSU */}
+            <div style={{ marginBottom: '40px' }}>
+              <h3 style={{ color: '#f59e0b', fontSize: '16px', marginBottom: '15px', borderBottom: '2px solid #fef3c7', paddingBottom: '10px' }}>
+                 Yeni Gelen Randevular
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={styles.table}>
+                  <thead>
                     <tr>
-                      <td colSpan="5" style={{...styles.td, textAlign: 'center', color: '#94a3b8'}}>
-                        Kayıtlı randevunuz bulunamadı.
-                      </td>
+                      <th style={styles.th}>Berberi</th>
+                      <th style={styles.th}>Müşteri</th>
+                      <th style={styles.th}>Telefon</th>
+                      <th style={styles.th}>Tarih ve Saat</th>
+                      <th style={{...styles.th, textAlign: 'center'}}>İşlemler</th>
                     </tr>
-                  ) : (
-                    filteredAppointments.map(a => (
-                      <tr key={a.id} style={styles.tr}>
-                        <td style={styles.td}>
-                          <span style={styles.barberTag}>
-                            {a.barberId === 1 ? 'Ozan' : 'Efehan'}
-                          </span>
-                        </td>
-                        <td style={{...styles.td, fontWeight: '600'}}>{a.customerName}</td>
-                        <td style={styles.td}>{a.phone}</td>
-                        <td style={styles.td}>{a.date} - <strong style={{color: '#4f46e5'}}>{a.time}</strong></td>
-                        <td style={{...styles.td, textAlign: 'center'}}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                            <a href={`tel:${a.phone}`} style={styles.callBtn} title="Ara">Ara</a>
-                            <button onClick={() => handleDelete(a.id)} style={styles.deleteBtn} title="İptal">Sil</button>
-                          </div>
+                  </thead>
+                  <tbody>
+                    {pendingAppointments.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={{...styles.td, textAlign: 'center', color: '#94a3b8'}}>
+                          Bekleyen yeni randevu bulunamadı.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      pendingAppointments.map(a => (
+                        <tr key={a.id} style={styles.tr}>
+                          <td style={styles.td}>
+                            <span style={styles.barberTag}>
+                              {a.barberId === 1 ? 'Ozan' : 'Efehan'}
+                            </span>
+                          </td>
+                          <td style={{...styles.td, fontWeight: '600'}}>{a.customerName}</td>
+                          <td style={styles.td}>{a.phone}</td>
+                          <td style={styles.td}>{a.date} - <strong style={{color: '#4f46e5'}}>{a.time}</strong></td>
+                          <td style={{...styles.td, textAlign: 'center'}}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                              <a href={`tel:${a.phone}`} style={styles.callBtn} title="Ara">Ara</a>
+                              <button 
+                                onClick={() => handleAccept(a.id)} 
+                                style={{ backgroundColor: '#2563eb', color: 'white', padding: '6px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}
+                              >
+                                Kabul Et
+                              </button>
+                              <button onClick={() => handleDelete(a.id)} style={styles.deleteBtn} title="İptal">Sil</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {/* KABUL EDİLEN RANDEVULAR TABLOSU */}
+            <div>
+              <h3 style={{ color: '#10b981', fontSize: '16px', marginBottom: '15px', borderBottom: '2px solid #d1fae5', paddingBottom: '10px' }}>
+                 Kabul Edilen Randevular
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Berberi</th>
+                      <th style={styles.th}>Müşteri</th>
+                      <th style={styles.th}>Telefon</th>
+                      <th style={styles.th}>Tarih ve Saat</th>
+                      <th style={{...styles.th, textAlign: 'center'}}>Durum / İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {acceptedAppointments.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={{...styles.td, textAlign: 'center', color: '#94a3b8'}}>
+                          Henüz onaylanmış randevu bulunamadı.
+                        </td>
+                      </tr>
+                    ) : (
+                      acceptedAppointments.map(a => (
+                        <tr key={a.id} style={styles.tr}>
+                          <td style={styles.td}>
+                            <span style={styles.barberTag}>
+                              {a.barberId === 1 ? 'Ozan' : 'Efehan'}
+                            </span>
+                          </td>
+                          <td style={{...styles.td, fontWeight: '600'}}>{a.customerName}</td>
+                          <td style={styles.td}>{a.phone}</td>
+                          <td style={styles.td}>{a.date} - <strong style={{color: '#4f46e5'}}>{a.time}</strong></td>
+                          <td style={{...styles.td, textAlign: 'center'}}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                              <span style={{ backgroundColor: '#d1fae5', color: '#047857', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
+                                ONAYLANDI
+                              </span>
+                              <a href={`tel:${a.phone}`} style={styles.callBtn} title="Ara">Ara</a>
+                              <button onClick={() => handleDelete(a.id)} style={styles.deleteBtn} title="İptal">Sil</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         )}
 
