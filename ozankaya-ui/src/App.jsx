@@ -254,7 +254,9 @@ export default function App() {
   const pendingAppointments = filteredAppointments.filter(a => !a.isAccepted);
   
   // Kabul edilenler: SADECE adminin o an takvimden seçtiği (veya varsayılan olarak bugünün) tarihine ait olanlar gelsin.
-  const acceptedAppointments = filteredAppointments.filter(a => a.isAccepted && a.date === selectedDate);
+  const acceptedAppointments = filteredAppointments.filter(a => 
+  a.isAccepted && String(a.date).split('T')[0] === selectedDate
+);
 
   // Tarihi Türk usulü GG.AA.YYYY formatına çevir (Başlıkta göstermek için)
   const displayDate = selectedDate.split('-').reverse().join('.');
