@@ -1,11 +1,29 @@
+
 using Microsoft.EntityFrameworkCore;
 using ozankaya_api.Data;
 using ozankaya_api.Hubs;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
+var rawConnectionString = builder.Configuration["DATABASE_URL"] 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+string connectionString = rawConnectionString;
+
+if (!string.IsNullOrEmpty(rawConnectionString) && rawConnectionString.StartsWith("postgres"))
+{
+    var databaseUri = new Uri(rawConnectionString);
+    var userInfo = databaseUri.UserInfo.Split(':');
+    var port = databaseUri.Port > 0 ? databaseUri.Port : 5432;
+    var dbName = databaseUri.LocalPath.TrimStart('/');
+    
+    connectionString = $"Host={databaseUri.Host};Port={port};Database={dbName};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;";
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=ozankaya.db"));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
@@ -17,7 +35,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddHostedService<AppointmentCleanupService>();
+// builder.Services.AddHostedService<AppointmentCleanupService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

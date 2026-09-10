@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as signalR from '@microsoft/signalr';
+import { Analytics } from '@vercel/analytics/react';
 
 const API_URL = "https://ozankaya-api.onrender.com/api/appointments";
 const HUB_URL = "https://ozankaya-api.onrender.com/appointmentHub";
@@ -15,10 +16,20 @@ const timeSlots = [
   "17:00", "18:00", "19:00", "20:00"
 ];
 
+// YENİ EKLENEN: Yerel saati baz alarak YYYY-MM-DD formatında bugünü verir.
+// Tam 00:00'da diğer güne geçmeyi garanti eder.
+const getLocalDateString = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function App() {
   const [adminBarber, setAdminBarber] = useState(null); 
   const [selectedBarber, setSelectedBarber] = useState(1);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString()); // Varsayılan olarak hep "bugün" ile açılır
   const [disabledSlots, setDisabledSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -222,7 +233,6 @@ export default function App() {
         method: 'POST'
       });
       if (response.ok) {
-        // SMS alertini sildik, sadece listeyi yeniliyoruz ki aşağıya düşsün
         fetchAppointments();
       } else {
         alert("Randevu kabul edilirken bir hata oluştu.");
@@ -239,9 +249,15 @@ export default function App() {
      a.date.includes(searchTerm))
   );
 
-  // Randevuları ikiye bölüyoruz
+  // FİLTRELEME MANTIĞI:
+  // Yeni gelen (onay bekleyenler): Tarih fark etmeksizin tüm bekleyenleri getir (gözden kaçmaması için).
   const pendingAppointments = filteredAppointments.filter(a => !a.isAccepted);
-  const acceptedAppointments = filteredAppointments.filter(a => a.isAccepted);
+  
+  // Kabul edilenler: SADECE adminin o an takvimden seçtiği (veya varsayılan olarak bugünün) tarihine ait olanlar gelsin.
+  const acceptedAppointments = filteredAppointments.filter(a => a.isAccepted && a.date === selectedDate);
+
+  // Tarihi Türk usulü GG.AA.YYYY formatına çevir (Başlıkta göstermek için)
+  const displayDate = selectedDate.split('-').reverse().join('.');
 
   return (
     <div style={styles.page}>
@@ -442,7 +458,7 @@ export default function App() {
             {/* YENİ GELEN RANDEVULAR TABLOSU */}
             <div style={{ marginBottom: '40px' }}>
               <h3 style={{ color: '#f59e0b', fontSize: '16px', marginBottom: '15px', borderBottom: '2px solid #fef3c7', paddingBottom: '10px' }}>
-                 Yeni Gelen Randevular
+                  Yeni Gelen Randevular
               </h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>
@@ -496,7 +512,7 @@ export default function App() {
             {/* KABUL EDİLEN RANDEVULAR TABLOSU */}
             <div>
               <h3 style={{ color: '#10b981', fontSize: '16px', marginBottom: '15px', borderBottom: '2px solid #d1fae5', paddingBottom: '10px' }}>
-                 Kabul Edilen Randevular
+                  Kabul Edilen Randevular ({displayDate})
               </h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>
@@ -513,7 +529,7 @@ export default function App() {
                     {acceptedAppointments.length === 0 ? (
                       <tr>
                         <td colSpan="5" style={{...styles.td, textAlign: 'center', color: '#94a3b8'}}>
-                          Henüz onaylanmış randevu bulunamadı.
+                          {displayDate} tarihi için onaylanmış randevu bulunamadı.
                         </td>
                       </tr>
                     ) : (
@@ -548,6 +564,7 @@ export default function App() {
         )}
 
       </div>
+      <Analytics />
     </div>
   );
 }
