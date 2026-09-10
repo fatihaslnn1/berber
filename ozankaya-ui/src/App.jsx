@@ -243,11 +243,15 @@ export default function App() {
   };
 
   const filteredAppointments = appointments.filter(a => 
-    (!adminBarber || a.barberId === adminBarber) &&
-    (a.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     a.phone.includes(searchTerm) ||
-     a.date.includes(searchTerm))
-  );
+  String(a.date).split('T')[0] === selectedDate &&
+  (!adminBarber || a.barberId === adminBarber) &&
+  (
+    a.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.phone.includes(searchTerm) ||
+    a.date.includes(searchTerm)
+  )
+);
+  ;
 
   // FİLTRELEME MANTIĞI:
   // Yeni gelen (onay bekleyenler): Tarih fark etmeksizin tüm bekleyenleri getir (gözden kaçmaması için).
